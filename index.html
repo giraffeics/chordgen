@@ -1,0 +1,148 @@
+<html>
+    <head>
+        <script src="node_modules/tone/build/Tone.js"></script>
+        <script type="text/javascript">
+            const noteNames = [
+                "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+            ];
+
+            const major = {
+                notes: [0, 4, 7],
+                name: "Major"
+            };
+            const minor = {
+                notes: [0, 3, 7],
+                name: "Minor"
+            };
+            const diminished = {
+                notes: [0, 3, 6],
+                name: "Diminished"
+            };
+            const sus4 = {
+                notes: [0, 5, 7],
+                name: "Sus4"
+            };
+            
+            major.transitions = [
+                [major, -7],
+                [minor, 2],
+                [diminished, 4],
+                [sus4, 0]
+            ];
+
+            minor.transitions = [
+                [major, 5],
+                [major, 3]
+            ];
+
+            diminished.transitions = [
+                [major, 1],
+                [minor, -2],
+                [major, 1],
+                [minor, -2],
+                [diminished, 3]
+            ];
+
+            sus4.transitions = [
+                [major, 1],
+                [minor, 2]
+            ];
+        </script>
+    </head>
+    <body>
+        <div style="margin:auto; text-align:center;">
+            <button onclick="doNoise()" id="StartButton">Start</button><br/>
+            <h1 id="ChordName" style="display:none"></h1>
+            <h2 id="NextChord" style="display:none"></h2>
+        </div>
+
+        <script type="text/javascript">
+            const nameTag = document.getElementById("ChordName");
+            const nextTag = document.getElementById("NextChord");
+            const startButton = document.getElementById("StartButton");
+
+            const synth = new Tone.PolySynth(Tone.Synth, 
+            {
+                "volume": 0,
+                "detune": 0,
+                "portamento": 0.05,
+                "envelope": {
+                    "attack": 0.05,
+                    "attackCurve": "exponential",
+                    "decay": 0.2,
+                    "decayCurve": "exponential",
+                    "release": 1.5,
+                    "releaseCurve": "exponential",
+                    "sustain": 0.6
+                },
+                "oscillator": {
+                    "partialCount": 20,
+                    "partials": [
+                        0.1299, 0.0976, 0.0855, 0.1910,
+                        0.1518, 0.0483, 0.0471, 0.0356,
+                        0.0280, 0.0271, 0.0270, 0.0350,
+                        0.0277, 0.0136, 0.0069, 0.0040,
+                        0.0053, 0.0114, 0.0097, 0.0033
+                    ],
+                    "phase": 0,
+                    "type": "amtriangle10",
+                    "harmonicity": 0.5,
+                    "modulationType": "sine"
+                }
+            }).toDestination();
+
+            chord = major;
+            root = 0;
+
+            function nextChord(time, yadayada)
+            {
+                // START PLAYING CHORD
+                nameTag.innerHTML = (noteNames[((root % 12)+12)%12] + " " + chord.name);
+
+                for(var i=0; i<chord.notes.length; i++)
+                    synth.triggerAttackRelease(261.63 * Math.pow(2, (root+chord.notes[i])/12.0), "3.8", time);
+
+                // CHOOSE NEXT CHORD
+                var nextIndex = Math.floor(Math.random() * chord.transitions.length);
+
+                root += chord.transitions[nextIndex][1];
+                chord = chord.transitions[nextIndex][0];
+
+                if(root < -15)
+                    root += 12;
+
+                if(root > 15)
+                    root -= 12;
+
+                nextTag.innerHTML = (noteNames[((root % 12)+12)%12] + " " + chord.name);
+            }
+
+            const percSynth = new Tone.MembraneSynth().toDestination();
+
+            function playPerc(time, yadayada)
+            {
+                percSynth.triggerAttackRelease("C2", "8n", time);
+            }
+
+            var hasStarted = false;
+
+            function doNoise()
+            {
+                if(hasStarted)
+                    return;
+
+                hasStarted = true;
+
+                startButton.style.display = "none";
+                nameTag.style.display = "block";
+                nextTag.style.display = "block";
+
+                Tone.start();
+                
+                const chordEvent = new Tone.Loop(nextChord, 4).start(0);
+                const percEvent = new Tone.Loop(playPerc, 0.5).start(0);
+                Tone.Transport.start();
+            }
+        </script>
+    </body>
+</html>
